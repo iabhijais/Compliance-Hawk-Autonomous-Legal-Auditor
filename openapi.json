@@ -73,16 +73,11 @@
           "contract_text": {
             "type": "string",
             "title": "Contract Text"
-          },
-          "regulation_rule": {
-            "type": "string",
-            "title": "Regulation Rule"
           }
         },
         "type": "object",
         "required": [
-          "contract_text",
-          "regulation_rule"
+          "contract_text"
         ],
         "title": "AuditRequest"
       },

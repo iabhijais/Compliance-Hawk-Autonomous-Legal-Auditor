@@ -59,7 +59,7 @@ else:
 
 class AuditRequest(BaseModel):
     contract_text: str
-    regulation_rule: str
+    regulation_rule: Optional[str] = "Indian Labor Law Standards"
 
 class AuditResponse(BaseModel):
     status: str
@@ -73,24 +73,32 @@ def audit_contract(request: AuditRequest):
 
     # Construct prompt
     # We use a structured prompt to guide the model to output JSON
-    prompt = f"""[INST] You are a strict AI Legal Auditor for a top-tier law firm. Your job is to find risks in vendor contracts.
+    # REPLACEMENT CODE FOR main.py PROMPT SECTION
+    prompt = f"""[INST] You are a Compliance Audit Engine. Your ONLY job is to compare the Contract Clause against the Regulation Rule.
 
-Regulation Rule: {request.regulation_rule}
+    INPUT DATA:
+    - Contract Clause: "{request.contract_text}"
+    - Regulation Rule: "{request.regulation_rule}"
 
-Contract Clause: {request.contract_text}
+    LOGIC STEPS:
+    1. Extract the number of days mentioned in the Contract Clause (e.g., 7, 30, 90).
+    2. Extract the minimum days required by the Regulation Rule (e.g., 30).
+    3. Compare: If Contract Days < Regulation Days -> NON-COMPLIANT (Risk 100).
+    4. Compare: If Contract Days >= Regulation Days -> COMPLIANT (Risk 0).
+    5. Exception: If no notice period is found in the contract -> NON-COMPLIANT (Risk 100).
 
-INSTRUCTIONS:
-1. Compare the Contract Clause DIRECTLY against the Regulation Rule.
-2. If the contract says "7 days" and rule says "30 days", it is a MAJOR VIOLATION.
-3. You must return JSON output.
+    OUTPUT INSTRUCTIONS:
+    - You must write a concise explanation.
+    - You MUST end the explanation with exactly this phrase: "Risk Score: [0 or 100] | Status: [Compliant/Non-Compliant]".
 
-Output Format:
-{{
-    "status": "Non-Compliant" or "Compliant",
-    "risk_score": (Return 100 if violation found, else 0),
-    "explanation": "Explain exactly why it failed (e.g., '7 days is less than required 30 days')."
-}}
-[/INST]"""
+    Example Output 1:
+    "The contract specifies 7 days, which is less than the mandatory 30 days. Risk Score: 100 | Status: Non-Compliant"
+
+    Example Output 2:
+    "The contract specifies 90 days, which meets the 30-day requirement. Risk Score: 0 | Status: Compliant"
+
+    GENERATE OUTPUT NOW:
+    [/INST]"""
     
     try:
         # Generate response
@@ -110,9 +118,20 @@ Output Format:
         # Parse JSON
         result = json.loads(clean_response)
         
+        risk_score = result.get("risk_score", 0)
+        raw_status = result.get("status", "Unknown")
+        
+        # Add visual indicators (Emojis) for UI
+        if risk_score >= 80:
+            status_with_color = f"🔴 {raw_status}"
+        elif risk_score >= 40:
+            status_with_color = f"🟡 {raw_status}"
+        else:
+            status_with_color = f"🟢 {raw_status}"
+            
         return AuditResponse(
-            status=result.get("status", "Unknown"),
-            risk_score=result.get("risk_score", 0),
+            status=status_with_color,
+            risk_score=risk_score,
             explanation=result.get("explanation", "No explanation provided.")
         )
         
